@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foxes and Hares game (with rocks)</title>
+    <style>
+        :root {
+            --hares: #4CAF50;
+            --foxs: #FFC107;
+            --rocks: #F44336;
+            --positive: #2E7D32;
+            --negative: #C62828;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+        }
+        .main-panel, .tracker-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .cell {
+            border: 2px solid #e0e0e0;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            transition: all 0.2s;
+        }
+        .cell.selected {
+            border-color: #2196F3;
+            background: #E3F2FD;
+            transform: scale(1.02);
+            box-shadow: 0 2px 8px rgba(33,150,243,0.3);
+        }
+        .entity {
+            margin: 6px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #2196F3;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0d8aee;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .tracker-section {
+            margin-bottom: 20px;
+        }
+        .tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #eee;
+        }
+        .tracker-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .species-badge {
+            display: inline-flex;
+            align-items: center;
+        }
+        .badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .hares-badge { background: var(--hares); }
+        .foxs-badge { background: var(--foxs); }
+        .rocks-badge { background: var(--rocks); }
+        .positive { color: var(--positive); font-weight: bold; }
+        .negative { color: var(--negative); font-weight: bold; }
+        .history-log {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .log-entry {
+            padding: 6px;
+            margin: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .info-display {
+            background: #E3F2FD;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Foxes and Hares game (with rocks)</h1>
+    
+    <div class="game-container">
+        <div class="main-panel">
+            <div class="info-display">
+                <div>Turn: <strong id="turn-count">0</strong></div>
+                <div>Selected: <strong id="selected-species">Hares</strong></div>
+                <div>Growth: <span id="growth-rate">0.1</span> | 
+                     Move: <span id="move-prob">5%</span></div>
+            </div>
+            
+            <div class="controls">
+                <button id="up">↑ Up</button>
+                <button id="left">← Left</button>
+                <button id="right">→ Right</button>
+                <button id="down">↓ Down</button>
+                <button id="increase">+ Increase</button>
+                <button id="decrease">- Decrease</button>
+                <button id="switch">Switch Species</button>
+                <button id="next">Next Turn</button>
+            </div>
+            
+            <div class="grid" id="grid"></div>
+        </div>
+        
+        <div class="tracker-panel">
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>Population Totals</h3>
+                </div>
+                <div id="species-totals">
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge hares-badge"></span>Hares
+                        </span>
+                        <span id="hares-total">0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge foxs-badge"></span>Foxs
+                        </span>
+                        <span id="foxs-total">0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge rocks-badge"></span>Rocks
+                        </span>
+                        <span id="rocks-total">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>This Turn</h3>
+                    <button id="reset-turn">Reset</button>
+                </div>
+                <div id="turn-changes">
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge hares-badge"></span>Hares
+                        </span>
+                        <span id="hares-change">+0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge foxs-badge"></span>Foxs
+                        </span>
+                        <span id="foxs-change">+0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge rocks-badge"></span>Rocks
+                        </span>
+                        <span id="rocks-change">+0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>History Log</h3>
+                    <button id="clear-log">Clear</button>
+                </div>
+                <div class="history-log" id="history-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game configuration
+        const config = {
+            gridSize: { width: 5, height: 5 },
+            species: {
+                hares: {
+                    name: "Hares",
+                    color: "hares",
+                    growth: 1.4,
+                    moveProb: 0.3,
+                    interactions: [-0.002, -0.002, 0]
+                },
+                foxs: {
+                    name: "Foxs",
+                    color: "foxs",
+                    growth: -0.2,
+                    moveProb: 0.2,
+                    interactions: [0.001, -0.004, 0]
+                },
+                rocks: {
+                    name: "Rocks",
+                    color: "rocks",
+                    growth: 0.0,
+                    moveProb: 0.0,
+                    interactions: [0, 0, 0]
+                }
+            },
+            initialPopulations: {
+                hares: { min: 50, range: 50 },
+                foxs: { min: 10, range: 20 },
+                rocks: { min: 5, range: 10 }
+            }
+        };
+
+        // Game state
+        const state = {
+            ecosystem: [],
+            cursor: { x: 0, y: 0 },
+            selectedEntity: 0,
+            turn: 0,
+            totals: [0, 0, 0],
+            previousTotals: [0, 0, 0],
+            changes: [0, 0, 0],
+            history: []
+        };
+
+        // DOM elements
+        const elements = {
+            grid: document.getElementById('grid'),
+            turnCount: document.getElementById('turn-count'),
+            selectedSpecies: document.getElementById('selected-species'),
+            growthRate: document.getElementById('growth-rate'),
+            moveProb: document.getElementById('move-prob'),
+            haresTotal: document.getElementById('hares-total'),
+            foxsTotal: document.getElementById('foxs-total'),
+            rocksTotal: document.getElementById('rocks-total'),
+            haresChange: document.getElementById('hares-change'),
+            foxsChange: document.getElementById('foxs-change'),
+            rocksChange: document.getElementById('rocks-change'),
+            historyLog: document.getElementById('history-log'),
+            up: document.getElementById('up'),
+            down: document.getElementById('down'),
+            left: document.getElementById('left'),
+            right: document.getElementById('right'),
+            increase: document.getElementById('increase'),
+            decrease: document.getElementById('decrease'),
+            switch: document.getElementById('switch'),
+            next: document.getElementById('next'),
+            resetTurn: document.getElementById('reset-turn'),
+            clearLog: document.getElementById('clear-log')
+        };
+
+        // Initialize the ecosystem
+        function initEcosystem() {
+            state.ecosystem = Array(config.gridSize.height).fill().map(() => 
+                Array(config.gridSize.width).fill().map(() => [
+                    config.initialPopulations.hares.min + Math.floor(Math.random() * config.initialPopulations.hares.range),
+                    config.initialPopulations.foxs.min + Math.floor(Math.random() * config.initialPopulations.foxs.range),
+                    config.initialPopulations.rocks.min + Math.floor(Math.random() * config.initialPopulations.rocks.range)
+                ])
+            );
+            updateTotals();
+            state.previousTotals = [...state.totals];
+            resetChanges();
+        }
+
+        // Update population totals
+        function updateTotals() {
+            state.totals = [0, 0, 0];
+            state.ecosystem.forEach(row => {
+                row.forEach(cell => {
+                    cell.forEach((count, i) => {
+                        state.totals[i] += count;
+                    });
+                });
+            });
+        }
+
+        // Calculate changes since last turn
+        function calculateChanges() {
+            state.changes = state.totals.map((total, i) => total - state.previousTotals[i]);
+        }
+
+        // Reset changes for new turn
+        function resetChanges() {
+            state.changes = [0, 0, 0];
+        }
+
+        // Add log entry
+        function addLog(message) {
+            const entry = {
+                turn: state.turn,
+                message,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            state.history.unshift(entry);
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `T${entry.turn} @ ${entry.timestamp}: ${entry.message}`;
+            elements.historyLog.prepend(logEntry);
+        }
+
+        // Apply ecosystem interactions
+        function applyInteractions() {
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const current = [...cell];
+                    const change = [0, 0, 0];
+                    const newPop = [0, 0, 0];
+                    
+                    // Calculate interactions
+                    for (let e = 0; e < 3; e++) {
+                        for (let f = 0; f < 3; f++) {
+                            change[e] += Object.values(config.species)[e].interactions[f] * current[f];
+                        }
+                    }
+                    
+                    // Apply changes
+                    for (let e = 0; e < 3; e++) {
+                        const growth = Object.values(config.species)[e].growth;
+                        newPop[e] = current[e] + current[e] * (growth + change[e]);
+                        state.ecosystem[y][x][e] = Math.max(0, Math.floor(newPop[e]));
+                    }
+                });
+            });
+        }
+
+        // Simulate movement between cells
+        function simulateMovement() {
+            const newPops = Array(config.gridSize.height).fill().map(() => 
+                Array(config.gridSize.width).fill().map(() => [0, 0, 0]));
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, e) => {
+                        const moveProb = Object.values(config.species)[e].moveProb;
+                        const moving = Math.random() < moveProb ? Math.floor(count / 2) : 0;
+                        const perNeighbor = Math.floor(moving / 8);
+                        
+                        // Distribute to neighbors
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                
+                                const nx = x + dx;
+                                const ny = y + dy;
+                                
+                                if (nx >= 0 && nx < config.gridSize.width && 
+                                    ny >= 0 && ny < config.gridSize.height) {
+                                    newPops[ny][nx][e] += perNeighbor;
+                                    state.ecosystem[y][x][e] -= perNeighbor;
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // Apply movement results
+            newPops.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, e) => {
+                        state.ecosystem[y][x][e] += count;
+                    });
+                });
+            });
+        }
+
+        // Render the grid
+        function renderGrid() {
+            elements.grid.innerHTML = '';
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'cell';
+                    if (x === state.cursor.x && y === state.cursor.y) {
+                        cellElement.classList.add('selected');
+                    }
+                    
+                    cell.forEach((count, e) => {
+                        const entity = document.createElement('div');
+                        entity.className = 'entity';
+                        entity.innerHTML = `
+                            <span class="species-badge">
+                                <span class="badge ${Object.values(config.species)[e].color}-badge"></span>
+                                ${Object.values(config.species)[e].name}
+                            </span>
+                            <span>${count}</span>
+                        `;
+                        cellElement.appendChild(entity);
+                    });
+                    
+                    elements.grid.appendChild(cellElement);
+                });
+            });
+        }
+
+        // Render the tracker panel
+        function renderTracker() {
+            updateTotals();
+            calculateChanges();
+            
+            // Update totals display
+            elements.haresTotal.textContent = state.totals[0];
+            elements.foxsTotal.textContent = state.totals[1];
+            elements.rocksTotal.textContent = state.totals[2];
+            
+            // Update changes display
+            const updateChangeDisplay = (element, value) => {
+                element.textContent = (value >= 0 ? '+' : '') + value;
+                element.className = value >= 0 ? 'positive' : 'negative';
+            };
+            
+            updateChangeDisplay(elements.haresChange, state.changes[0]);
+            updateChangeDisplay(elements.foxsChange, state.changes[1]);
+            updateChangeDisplay(elements.rocksChange, state.changes[2]);
+        }
+
+        // Render the info panel
+        function renderInfo() {
+            elements.turnCount.textContent = state.turn;
+            elements.selectedSpecies.textContent = Object.values(config.species)[state.selectedEntity].name;
+            elements.growthRate.textContent = Object.values(config.species)[state.selectedEntity].growth;
+            elements.moveProb.textContent = `${Math.round(Object.values(config.species)[state.selectedEntity].moveProb * 100)}%`;
+        }
+
+        // Advance to next turn
+        function nextTurn() {
+            // Log significant changes before updating
+            state.changes.forEach((change, i) => {
+                if (Math.abs(change) > 5) {
+                    const species = Object.values(config.species)[i].name;
+                    const direction = change > 0 ? 'increased' : 'decreased';
+                    addLog(`${species} ${direction} by ${Math.abs(change)}`);
+                }
+            });
+            
+            applyInteractions();
+            simulateMovement();
+            
+            state.previousTotals = [...state.totals];
+            state.turn++;
+            resetChanges();
+            
+            renderAll();
+        }
+
+        // Reset current turn changes
+        function resetTurn() {
+            resetChanges();
+            renderTracker();
+        }
+
+        // Clear history log
+        function clearLog() {
+            state.history = [];
+            elements.historyLog.innerHTML = '';
+        }
+
+        // Render all components
+        function renderAll() {
+            renderGrid();
+            renderTracker();
+            renderInfo();
+        }
+
+        // Initialize game
+        function initGame() {
+            initEcosystem();
+            
+            // Set up event listeners
+            elements.up.addEventListener('click', () => {
+                if (state.cursor.y > 0) state.cursor.y--;
+                renderGrid();
+            });
+            
+            elements.down.addEventListener('click', () => {
+                if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++;
+                renderGrid();
+            });
+            
+            elements.left.addEventListener('click', () => {
+                if (state.cursor.x > 0) state.cursor.x--;
+                renderGrid();
+            });
+            
+            elements.right.addEventListener('click', () => {
+                if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++;
+                renderGrid();
+            });
+            
+            elements.increase.addEventListener('click', () => {
+                state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity]++;
+                renderAll();
+            });
+            
+            elements.decrease.addEventListener('click', () => {
+                if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity] > 0) {
+                    state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity]--;
+                    renderAll();
+                }
+            });
+            
+            elements.switch.addEventListener('click', () => {
+                state.selectedEntity = (state.selectedEntity + 1) % 3;
+                renderInfo();
+            });
+            
+            elements.next.addEventListener('click', nextTurn);
+            elements.resetTurn.addEventListener('click', resetTurn);
+            elements.clearLog.addEventListener('click', clearLog);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch (e.key) {
+                    case 'ArrowUp': if (state.cursor.y > 0) state.cursor.y--; break;
+                    case 'ArrowDown': if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++; break;
+                    case 'ArrowLeft': if (state.cursor.x > 0) state.cursor.x--; break;
+                    case 'ArrowRight': if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++; break;
+                    case '+': 
+                        state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity]++;
+                        break;
+                    case '-': 
+                        if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity] > 0) {
+                            state.ecosystem[state.cursor.y][state.cursor.x][state.selectedEntity]--;
+                        }
+                        break;
+                    case 'Tab': 
+                        e.preventDefault();
+                        state.selectedEntity = (state.selectedEntity + 1) % 3; 
+                        break;
+                    case 'Enter': nextTurn(); break;
+                    default: return;
+                }
+                renderAll();
+            });
+            
+            renderAll();
+        }
+
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
