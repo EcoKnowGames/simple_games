@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Ecosystem Game</title>
+    <title>Ecosystem Game with Housing</title>
     <style>
         :root {
-            --hares: #4CAF50;
-            --foxes: #FFC107;
-            --rocks: #F44336;
+            --plants: #4CAF50;
+            --herbivores: #FFC107;
+            --carnivores: #F44336;
             --player1: #2196F3;
             --player2: #9C27B0;
             --player3: #009688;
             --player4: #FF5722;
             --positive: #2E7D32;
             --negative: #C62828;
+            --house: #795548;
+            --disabled-cell: #e0e0e0;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -52,6 +54,11 @@
             border-radius: 10px;
             background: #f8f9fa;
             transition: all 0.3s ease;
+            position: relative;
+        }
+        .cell.disabled {
+            background: var(--disabled-cell);
+            opacity: 0.7;
         }
         .cell.selected {
             border-color: var(--primary);
@@ -59,12 +66,30 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(33,150,243,0.15);
         }
+        .cell.selected.disabled {
+            background: #d0d0d0;
+        }
         .entity {
             margin: 8px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
+        }
+        .house {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background-color: var(--house);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
         }
         .controls {
             display: grid;
@@ -92,6 +117,10 @@
         }
         button.secondary {
             background: #607d8b;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
         }
         .tracker-section {
             margin-bottom: 25px;
@@ -123,9 +152,9 @@
             border-radius: 50%;
             margin-right: 10px;
         }
-        .hares-badge { background: var(--hares); }
-        .foxes-badge { background: var(--foxes); }
-        .rocks-badge { background: var(--rocks); }
+        .plants-badge { background: var(--plants); }
+        .herbivores-badge { background: var(--herbivores); }
+        .carnivores-badge { background: var(--carnivores); }
         .positive { color: var(--positive); font-weight: 600; }
         .negative { color: var(--negative); font-weight: 600; }
         .history-log {
@@ -223,6 +252,92 @@
             cursor: pointer;
             margin-top: 10px;
         }
+        .action-counter {
+            text-align: center;
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .action-progress {
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .action-progress-bar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+        .build-house {
+            background: var(--house);
+            margin-top: 10px;
+        }
+        .victory-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .victory-message {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+        }
+        .victory-message h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        .victory-message button {
+            margin-top: 20px;
+        }
+        /* New Trading Panel Styles */
+        .trading-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+            display: none;
+        }
+        .trading-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .trade-form {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+        .trade-resource {
+            display: flex;
+            flex-direction: column;
+        }
+        .trade-arrow {
+            font-size: 24px;
+            text-align: center;
+        }
+        .trade-player-select {
+            margin-bottom: 10px;
+        }
+        .trade-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -247,12 +362,19 @@
     </div>
 
     <div id="game-screen" style="display: none;">
-        <h1>Multiplayer Ecosystem Game</h1>
+        <h1>Ecosystem Game with Housing</h1>
         
         <div class="game-container">
             <div class="main-panel">
                 <div id="player-turn-display" class="player-indicator player-1">
                     Player 1's Turn
+                </div>
+                
+                <div class="action-counter">
+                    Actions remaining: <span id="actions-remaining">400</span>/400
+                </div>
+                <div class="action-progress">
+                    <div id="action-progress-bar" class="action-progress-bar" style="width: 100%"></div>
                 </div>
                 
                 <div class="info-display">
@@ -262,7 +384,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">Selected Species</span>
-                        <span class="info-value" id="selected-species">Hares</span>
+                        <span class="info-value" id="selected-species">Plants</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Growth Rate</span>
@@ -282,6 +404,8 @@
                     <button id="increase">+ Increase</button>
                     <button id="decrease">- Decrease</button>
                     <button id="switch">Switch Species</button>
+                    <button id="build-house" class="build-house">Build House (40C, 500P)</button>
+                    <button id="trade">Trade</button>
                     <button id="end-turn">End Turn</button>
                 </div>
                 
@@ -289,6 +413,42 @@
             </div>
             
             <div class="side-panel">
+                <div class="trading-panel" id="trading-panel">
+                    <div class="trading-header">
+                        <h3>Trade Resources</h3>
+                        <button id="close-trade">✕</button>
+                    </div>
+                    <div class="trade-form">
+                        <div class="trade-resource">
+                            <select class="trade-player-select" id="trade-sender">
+                                <!-- Players will be added here -->
+                            </select>
+                            <select id="trade-send-resource">
+                                <option value="0">Plants</option>
+                                <option value="1">Herbivores</option>
+                                <option value="2">Carnivores</option>
+                            </select>
+                            <input type="number" id="trade-send-amount" min="1" value="1">
+                        </div>
+                        <div class="trade-arrow">⇄</div>
+                        <div class="trade-resource">
+                            <select class="trade-player-select" id="trade-receiver">
+                                <!-- Players will be added here -->
+                            </select>
+                            <select id="trade-receive-resource">
+                                <option value="0">Plants</option>
+                                <option value="1">Herbivores</option>
+                                <option value="2">Carnivores</option>
+                            </select>
+                            <input type="number" id="trade-receive-amount" min="1" value="1">
+                        </div>
+                    </div>
+                    <div class="trade-actions">
+                        <button id="propose-trade">Propose Trade</button>
+                        <button id="cancel-trade">Cancel</button>
+                    </div>
+                </div>
+                
                 <div class="tracker-section">
                     <div class="tracker-header">
                         <h3>Scoreboard</h3>
@@ -297,10 +457,11 @@
                         <thead>
                             <tr>
                                 <th>Player</th>
-                                <th>Hares</th>
-                                <th>Foxes</th>
-                                <th>Rocks</th>
-                                <th>Total</th>
+                                <th>Plants</th>
+                                <th>Herbivores</th>
+                                <th>Carnivores</th>
+                                <th>Houses</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -316,21 +477,21 @@
                     <div id="species-totals">
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge hares-badge"></span>Hares
+                                <span class="badge plants-badge"></span>Plants
                             </span>
-                            <span id="hares-total">0</span>
+                            <span id="plants-total">0</span>
                         </div>
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge foxes-badge"></span>Foxes
+                                <span class="badge herbivores-badge"></span>Herbivores
                             </span>
-                            <span id="foxes-total">0</span>
+                            <span id="herbivores-total">0</span>
                         </div>
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge rocks-badge"></span>Rocks
+                                <span class="badge carnivores-badge"></span>Carnivores
                             </span>
-                            <span id="rocks-total">0</span>
+                            <span id="carnivores-total">0</span>
                         </div>
                     </div>
                 </div>
@@ -345,38 +506,49 @@
         </div>
     </div>
 
+    <div class="victory-screen" id="victory-screen">
+        <div class="victory-message">
+            <h2 id="victory-title">Victory!</h2>
+            <p id="victory-text"></p>
+            <button id="new-game">New Game</button>
+        </div>
+    </div>
+
     <script>
         // Game configuration
         const config = {
             gridSize: { width: 5, height: 5 },
             species: [
                 {
-                    name: "Hares",
-                    color: "hares",
-                    growthRate: 1.4,
-                    moveProb: 0.3,
-                    interactions: [-0.002, -0.002, 0],
+                    name: "Plants",
+                    color: "plants",
+                    growthRate: 0.1,
+                    moveProb: 0.05,
+                    interactions: [-0.01, 0.001, -0.002],
                     initial: { min: 40, range: 40 }
                 },
                 {
-                    name: "Foxes",
-                    color: "foxes",
-                    growthRate: -0.2,
+                    name: "Herbivores",
+                    color: "herbivores",
+                    growthRate: -0.05,
                     moveProb: 0.2,
-                    interactions: [0.001, -0.004, 0],
+                    interactions: [0.005, -0.01, 0.003],
                     initial: { min: 10, range: 20 }
                 },
                 {
-                    name: "Rocks",
-                    color: "rocks",
-                    growthRate: 0.0,
-                    moveProb: 0.0,
-                    interactions: [0, 0, 0],
+                    name: "Carnivores",
+                    color: "carnivores",
+                    growthRate: 0.2,
+                    moveProb: 0.3,
+                    interactions: [-0.001, 0.002, -0.02],
                     initial: { min: 5, range: 10 }
                 }
             ],
             playerColors: ['player-1', 'player-2', 'player-3', 'player-4'],
-            logThreshold: 5
+            logThreshold: 5,
+            maxActionsPerTurn: 400,
+            houseRequirements: { plants: 500, carnivores: 40 },
+            victoryCondition: 3
         };
 
         // Game state
@@ -390,25 +562,33 @@
             totals: [0, 0, 0],
             prevTotals: [0, 0, 0],
             changes: [0, 0, 0],
-            history: []
+            history: [],
+            actionsRemaining: config.maxActionsPerTurn,
+            houses: [] // {x, y, playerIndex}
         };
 
         // DOM elements
         const elements = {
             setupScreen: document.getElementById('setup-screen'),
             gameScreen: document.getElementById('game-screen'),
+            victoryScreen: document.getElementById('victory-screen'),
+            victoryTitle: document.getElementById('victory-title'),
+            victoryText: document.getElementById('victory-text'),
+            newGame: document.getElementById('new-game'),
             playerCount: document.getElementById('player-count'),
             playerNamesContainer: document.getElementById('player-names-container'),
             startGame: document.getElementById('start-game'),
             playerTurnDisplay: document.getElementById('player-turn-display'),
+            actionsRemaining: document.getElementById('actions-remaining'),
+            actionProgressBar: document.getElementById('action-progress-bar'),
             grid: document.getElementById('grid'),
             turnCount: document.getElementById('turn-count'),
             selectedSpecies: document.getElementById('selected-species'),
             growthRate: document.getElementById('growth-rate'),
             moveProb: document.getElementById('move-prob'),
-            haresTotal: document.getElementById('hares-total'),
-            foxesTotal: document.getElementById('foxes-total'),
-            rocksTotal: document.getElementById('rocks-total'),
+            plantsTotal: document.getElementById('plants-total'),
+            herbivoresTotal: document.getElementById('herbivores-total'),
+            carnivoresTotal: document.getElementById('carnivores-total'),
             scoreboard: document.getElementById('scoreboard'),
             historyLog: document.getElementById('history-log'),
             up: document.getElementById('up'),
@@ -418,7 +598,19 @@
             increase: document.getElementById('increase'),
             decrease: document.getElementById('decrease'),
             switch: document.getElementById('switch'),
-            endTurn: document.getElementById('end-turn')
+            buildHouse: document.getElementById('build-house'),
+            trade: document.getElementById('trade'),
+            endTurn: document.getElementById('end-turn'),
+            tradingPanel: document.getElementById('trading-panel'),
+            closeTrade: document.getElementById('close-trade'),
+            tradeSender: document.getElementById('trade-sender'),
+            tradeSendResource: document.getElementById('trade-send-resource'),
+            tradeSendAmount: document.getElementById('trade-send-amount'),
+            tradeReceiver: document.getElementById('trade-receiver'),
+            tradeReceiveResource: document.getElementById('trade-receive-resource'),
+            tradeReceiveAmount: document.getElementById('trade-receive-amount'),
+            proposeTrade: document.getElementById('propose-trade'),
+            cancelTrade: document.getElementById('cancel-trade')
         };
 
         // Initialize player name inputs based on selected count
@@ -440,13 +632,16 @@
         elements.startGame.addEventListener('click', function() {
             const playerCount = parseInt(elements.playerCount.value);
             state.players = [];
+            state.houses = [];
             
             for (let i = 0; i < playerCount; i++) {
                 const name = document.getElementById(`player-${i+1}`).value || `Player ${i+1}`;
                 state.players.push({
                     name,
                     color: config.playerColors[i],
-                    scores: [0, 0, 0] // Hares, Foxes, Rocks
+                    scores: [0, 0, 0], // Plants, Herbivores, Carnivores
+                    actionsUsed: 0,
+                    houses: 0
                 });
             }
             
@@ -517,6 +712,10 @@
         function applyInteractions() {
             state.ecosystem.forEach((row, y) => {
                 row.forEach((cell, x) => {
+                    // Skip if this cell has a house
+                    const hasHouse = state.houses.some(h => h.x === x && h.y === y);
+                    if (hasHouse) return;
+                    
                     const newPopulations = [0, 0, 0];
                     
                     // Calculate new populations based on interactions
@@ -545,6 +744,10 @@
             
             state.ecosystem.forEach((row, y) => {
                 row.forEach((cell, x) => {
+                    // Skip if this cell has a house
+                    const hasHouse = state.houses.some(h => h.x === x && h.y === y);
+                    if (hasHouse) return;
+                    
                     cell.forEach((count, speciesIdx) => {
                         const moveProb = config.species[speciesIdx].moveProb;
                         if (Math.random() < moveProb) {
@@ -561,8 +764,12 @@
                                     
                                     if (nx >= 0 && nx < config.gridSize.width && 
                                         ny >= 0 && ny < config.gridSize.height) {
-                                        movementChanges[ny][nx][speciesIdx] += perNeighbor;
-                                        state.ecosystem[y][x][speciesIdx] -= perNeighbor;
+                                        // Skip if target cell has a house
+                                        const targetHasHouse = state.houses.some(h => h.x === nx && h.y === ny);
+                                        if (!targetHasHouse) {
+                                            movementChanges[ny][nx][speciesIdx] += perNeighbor;
+                                            state.ecosystem[y][x][speciesIdx] -= perNeighbor;
+                                        }
                                     }
                                 }
                             }
@@ -581,6 +788,148 @@
             });
         }
 
+        // Check if player can build a house
+        function canBuildHouse() {
+            const player = state.players[state.currentPlayer];
+            return player.scores[2] >= config.houseRequirements.carnivores && 
+                   player.scores[0] >= config.houseRequirements.plants;
+        }
+
+        // Build a house at current cursor position
+        function buildHouse() {
+            const player = state.players[state.currentPlayer];
+            
+            if (player.scores[2] < config.houseRequirements.carnivores || 
+                player.scores[0] < config.houseRequirements.plants) {
+                addHistory("Not enough resources to build a house (need 40C and 500P)");
+                return;
+            }
+            
+            // Check if there's already a house here
+            const existingHouse = state.houses.find(h => 
+                h.x === state.cursor.x && h.y === state.cursor.y);
+            
+            if (existingHouse) {
+                addHistory("Cannot build here - another house exists");
+                return;
+            }
+            
+            // Deduct resources
+            player.scores[2] -= config.houseRequirements.carnivores;
+            player.scores[0] -= config.houseRequirements.plants;
+            
+            // Clear all species from this cell
+            state.ecosystem[state.cursor.y][state.cursor.x] = [0, 0, 0];
+            
+            // Add house
+            state.houses.push({
+                x: state.cursor.x,
+                y: state.cursor.y,
+                playerIndex: state.currentPlayer
+            });
+            
+            player.houses++;
+            addHistory(`Built a house at (${state.cursor.x+1},${state.cursor.y+1})`);
+            
+            // Check for victory
+            if (player.houses >= config.victoryCondition) {
+                showVictory(player);
+            }
+            
+            renderAll();
+        }
+
+        // Execute a trade between players
+        function executeTrade() {
+            const senderIndex = parseInt(elements.tradeSender.value);
+            const receiverIndex = parseInt(elements.tradeReceiver.value);
+            const sendResource = parseInt(elements.tradeSendResource.value);
+            const receiveResource = parseInt(elements.tradeReceiveResource.value);
+            const sendAmount = parseInt(elements.tradeSendAmount.value);
+            const receiveAmount = parseInt(elements.tradeReceiveAmount.value);
+            
+            const sender = state.players[senderIndex];
+            const receiver = state.players[receiverIndex];
+            
+            // Validate trade
+            if (senderIndex === receiverIndex) {
+                addHistory("Cannot trade with yourself!");
+                return;
+            }
+            
+            if (sender.scores[sendResource] < sendAmount) {
+                addHistory(`${sender.name} doesn't have enough ${config.species[sendResource].name} to trade!`);
+                return;
+            }
+            
+            if (receiver.scores[receiveResource] < receiveAmount) {
+                addHistory(`${receiver.name} doesn't have enough ${config.species[receiveResource].name} to trade!`);
+                return;
+            }
+            
+            // Execute trade
+            sender.scores[sendResource] -= sendAmount;
+            receiver.scores[sendResource] += sendAmount;
+            
+            receiver.scores[receiveResource] -= receiveAmount;
+            sender.scores[receiveResource] += receiveAmount;
+            
+            addHistory(`${sender.name} traded ${sendAmount} ${config.species[sendResource].name} to ${receiver.name} for ${receiveAmount} ${config.species[receiveResource].name}`);
+            
+            // Close trading panel
+            toggleTradingPanel(false);
+            renderAll();
+        }
+
+        // Toggle trading panel visibility
+        function toggleTradingPanel(show) {
+            if (show) {
+                // Update player dropdowns
+                elements.tradeSender.innerHTML = '';
+                elements.tradeReceiver.innerHTML = '';
+                
+                state.players.forEach((player, index) => {
+                    if (index !== state.currentPlayer) {
+                        const option1 = document.createElement('option');
+                        option1.value = index;
+                        option1.textContent = player.name;
+                        elements.tradeSender.appendChild(option1);
+                        
+                        const option2 = document.createElement('option');
+                        option2.value = index;
+                        option2.textContent = player.name;
+                        elements.tradeReceiver.appendChild(option2);
+                    }
+                });
+                
+                // Set current player as default receiver
+                const option = document.createElement('option');
+                option.value = state.currentPlayer;
+                option.textContent = state.players[state.currentPlayer].name;
+                elements.tradeReceiver.appendChild(option);
+                
+                // Reset amounts
+                elements.tradeSendAmount.value = 1;
+                elements.tradeReceiveAmount.value = 1;
+            }
+            
+            elements.tradingPanel.style.display = show ? 'block' : 'none';
+        }
+
+        // Show victory screen
+        function showVictory(player) {
+            elements.victoryTitle.textContent = `${player.name} Wins!`;
+            elements.victoryText.textContent = `${player.name} has built ${player.houses} houses and won the game!`;
+            elements.victoryScreen.style.display = 'flex';
+        }
+
+        // Start a new game
+        elements.newGame.addEventListener('click', function() {
+            elements.victoryScreen.style.display = 'none';
+            elements.gameScreen.style.display = 'none';
+            elements.setupScreen.style.display = 'block';
+        });
+
         // Render the ecosystem grid
         function renderGrid() {
             elements.grid.innerHTML = '';
@@ -589,8 +938,24 @@
                 row.forEach((cell, x) => {
                     const cellElement = document.createElement('div');
                     cellElement.className = 'cell';
+                    
+                    // Check if this cell has a house
+                    const house = state.houses.find(h => h.x === x && h.y === y);
+                    if (house) {
+                        cellElement.classList.add('disabled');
+                    }
+                    
                     if (x === state.cursor.x && y === state.cursor.y) {
                         cellElement.classList.add('selected');
+                    }
+                    
+                    // Add house if exists
+                    if (house) {
+                        const houseElement = document.createElement('div');
+                        houseElement.className = 'house';
+                        houseElement.style.backgroundColor = `var(--${config.playerColors[house.playerIndex]})`;
+                        houseElement.textContent = state.players[house.playerIndex].name[0];
+                        cellElement.appendChild(houseElement);
                     }
                     
                     cell.forEach((count, speciesIdx) => {
@@ -622,14 +987,13 @@
                     row.style.fontWeight = 'bold';
                 }
                 
-                const total = player.scores.reduce((sum, score) => sum + score, 0);
-                
                 row.innerHTML = `
                     <td>${player.name}</td>
                     <td>${player.scores[0]}</td>
                     <td>${player.scores[1]}</td>
                     <td>${player.scores[2]}</td>
-                    <td>${total}</td>
+                    <td>${player.houses}</td>
+                    <td>${player.actionsUsed}/${config.maxActionsPerTurn}</td>
                 `;
                 
                 tbody.appendChild(row);
@@ -642,9 +1006,9 @@
             calculateChanges();
             
             // Update totals display
-            elements.haresTotal.textContent = state.totals[0];
-            elements.foxesTotal.textContent = state.totals[1];
-            elements.rocksTotal.textContent = state.totals[2];
+            elements.plantsTotal.textContent = state.totals[0];
+            elements.herbivoresTotal.textContent = state.totals[1];
+            elements.carnivoresTotal.textContent = state.totals[2];
         }
 
         // Render the information panel
@@ -658,6 +1022,18 @@
             const currentPlayer = state.players[state.currentPlayer];
             elements.playerTurnDisplay.textContent = `${currentPlayer.name}'s Turn`;
             elements.playerTurnDisplay.className = `player-indicator ${currentPlayer.color}`;
+            
+            // Update action counter
+            elements.actionsRemaining.textContent = state.actionsRemaining;
+            const percentage = (state.actionsRemaining / config.maxActionsPerTurn) * 100;
+            elements.actionProgressBar.style.width = `${percentage}%`;
+            
+            // Disable buttons if no actions left
+            elements.increase.disabled = state.actionsRemaining <= 0;
+            elements.decrease.disabled = state.actionsRemaining <= 0;
+            
+            // Update build house button
+            elements.buildHouse.disabled = !canBuildHouse();
         }
 
         // Advance to next player's turn
@@ -668,6 +1044,10 @@
             
             state.prevTotals = [...state.totals];
             state.turn++;
+            
+            // Reset action counter for next player
+            state.actionsRemaining = config.maxActionsPerTurn;
+            state.players[state.currentPlayer].actionsUsed = 0;
             
             // Move to next player
             state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
@@ -713,17 +1093,25 @@
             
             // Population adjustment
             elements.increase.addEventListener('click', () => {
-                state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
-                state.players[state.currentPlayer].scores[state.selectedSpecies]++;
-                addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
-                renderAll();
+                if (state.actionsRemaining > 0) {
+                    state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                    state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                    state.players[state.currentPlayer].actionsUsed++;
+                    state.actionsRemaining--;
+                    addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                    renderAll();
+                }
             });
             
             elements.decrease.addEventListener('click', () => {
-                if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
-                    state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
-                    state.players[state.currentPlayer].scores[state.selectedSpecies]--;
-                    addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                const cell = state.ecosystem[state.cursor.y][state.cursor.x];
+                if (state.actionsRemaining > 0 && cell[state.selectedSpecies] > 0) {
+                    cell[state.selectedSpecies]--;
+                    // Now INCREASING score when removing species
+                    state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                    state.players[state.currentPlayer].actionsUsed++;
+                    state.actionsRemaining--;
+                    addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1}) (gained 1 point)`);
                     renderAll();
                 }
             });
@@ -733,6 +1121,15 @@
                 state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length;
                 renderInfo();
             });
+            
+            // Build house
+            elements.buildHouse.addEventListener('click', buildHouse);
+            
+            // Trade button
+            elements.trade.addEventListener('click', () => toggleTradingPanel(true));
+            elements.closeTrade.addEventListener('click', () => toggleTradingPanel(false));
+            elements.cancelTrade.addEventListener('click', () => toggleTradingPanel(false));
+            elements.proposeTrade.addEventListener('click', executeTrade);
             
             // End turn
             elements.endTurn.addEventListener('click', nextTurn);
@@ -745,20 +1142,36 @@
                     case 'ArrowLeft': if (state.cursor.x > 0) state.cursor.x--; break;
                     case 'ArrowRight': if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++; break;
                     case '+': 
-                        state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
-                        state.players[state.currentPlayer].scores[state.selectedSpecies]++;
-                        addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                        if (state.actionsRemaining > 0) {
+                            state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                            state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                            state.players[state.currentPlayer].actionsUsed++;
+                            state.actionsRemaining--;
+                            addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                        }
                         break;
                     case '-': 
-                        if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
-                            state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
-                            state.players[state.currentPlayer].scores[state.selectedSpecies]--;
-                            addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                        const cell = state.ecosystem[state.cursor.y][state.cursor.x];
+                        if (state.actionsRemaining > 0 && cell[state.selectedSpecies] > 0) {
+                            cell[state.selectedSpecies]--;
+                            // Now INCREASING score when removing species
+                            state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                            state.players[state.currentPlayer].actionsUsed++;
+                            state.actionsRemaining--;
+                            addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1}) (gained 1 point)`);
                         }
                         break;
                     case 'Tab': 
                         e.preventDefault();
                         state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length; 
+                        break;
+                    case 'b':
+                    case 'B':
+                        if (canBuildHouse()) buildHouse();
+                        break;
+                    case 't':
+                    case 'T':
+                        toggleTradingPanel(true);
                         break;
                     case 'Enter': nextTurn(); break;
                     default: return;
