@@ -6,9 +6,9 @@
     <title>Ecosystem Game with Housing</title>
     <style>
         :root {
-            --plants: #4CAF50;
-            --herbivores: #FFC107;
-            --carnivores: #F44336;
+            --hares: #4CAF50;
+            --foxes: #FFC107;
+            --rocks: #F44336;
             --player1: #2196F3;
             --player2: #9C27B0;
             --player3: #009688;
@@ -152,9 +152,9 @@
             border-radius: 50%;
             margin-right: 10px;
         }
-        .plants-badge { background: var(--plants); }
-        .herbivores-badge { background: var(--herbivores); }
-        .carnivores-badge { background: var(--carnivores); }
+        .hares-badge { background: var(--hares); }
+        .foxes-badge { background: var(--foxes); }
+        .rocks-badge { background: var(--rocks); }
         .positive { color: var(--positive); font-weight: 600; }
         .negative { color: var(--negative); font-weight: 600; }
         .history-log {
@@ -384,7 +384,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">Selected Species</span>
-                        <span class="info-value" id="selected-species">Plants</span>
+                        <span class="info-value" id="selected-species">Hares</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Growth Rate</span>
@@ -404,7 +404,7 @@
                     <button id="increase">+ Increase</button>
                     <button id="decrease">- Decrease</button>
                     <button id="switch">Switch Species</button>
-                    <button id="build-house" class="build-house">Build House (40C, 500P)</button>
+                    <button id="build-house" class="build-house">Build House (40 Rock, 500 Hare)</button>
                     <button id="trade">Trade</button>
                     <button id="end-turn">End Turn</button>
                 </div>
@@ -424,9 +424,9 @@
                                 <!-- Players will be added here -->
                             </select>
                             <select id="trade-send-resource">
-                                <option value="0">Plants</option>
-                                <option value="1">Herbivores</option>
-                                <option value="2">Carnivores</option>
+                                <option value="0">Hares</option>
+                                <option value="1">Foxes</option>
+                                <option value="2">Rocks</option>
                             </select>
                             <input type="number" id="trade-send-amount" min="1" value="1">
                         </div>
@@ -436,9 +436,9 @@
                                 <!-- Players will be added here -->
                             </select>
                             <select id="trade-receive-resource">
-                                <option value="0">Plants</option>
-                                <option value="1">Herbivores</option>
-                                <option value="2">Carnivores</option>
+                                <option value="0">Hares</option>
+                                <option value="1">Foxes</option>
+                                <option value="2">Rocks</option>
                             </select>
                             <input type="number" id="trade-receive-amount" min="1" value="1">
                         </div>
@@ -457,9 +457,9 @@
                         <thead>
                             <tr>
                                 <th>Player</th>
-                                <th>Plants</th>
-                                <th>Herbivores</th>
-                                <th>Carnivores</th>
+                                <th>Hares</th>
+                                <th>Foxes</th>
+                                <th>Rocks</th>
                                 <th>Houses</th>
                                 <th>Actions</th>
                             </tr>
@@ -477,21 +477,21 @@
                     <div id="species-totals">
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge plants-badge"></span>Plants
+                                <span class="badge hares-badge"></span>Hares
                             </span>
-                            <span id="plants-total">0</span>
+                            <span id="hares-total">0</span>
                         </div>
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge herbivores-badge"></span>Herbivores
+                                <span class="badge foxes-badge"></span>Foxes
                             </span>
-                            <span id="herbivores-total">0</span>
+                            <span id="foxes-total">0</span>
                         </div>
                         <div class="tracker-item">
                             <span class="species-badge">
-                                <span class="badge carnivores-badge"></span>Carnivores
+                                <span class="badge rocks-badge"></span>Rocks
                             </span>
-                            <span id="carnivores-total">0</span>
+                            <span id="rocks-total">0</span>
                         </div>
                     </div>
                 </div>
@@ -520,34 +520,34 @@
             gridSize: { width: 5, height: 5 },
             species: [
                 {
-                    name: "Plants",
-                    color: "plants",
-                    growthRate: 0.1,
-                    moveProb: 0.05,
-                    interactions: [-0.01, 0.001, -0.002],
+                    name: "Hares",
+                    color: "hares",
+                    growthRate: 1.4,
+                    moveProb: 0.3,
+                    interactions: [-0.002, -0.002, 0],
                     initial: { min: 40, range: 40 }
                 },
                 {
-                    name: "Herbivores",
-                    color: "herbivores",
-                    growthRate: -0.05,
+                    name: "Foxes",
+                    color: "foxes",
+                    growthRate: -0.2,
                     moveProb: 0.2,
-                    interactions: [0.005, -0.01, 0.003],
+                    interactions: [0.001, -0.004, 0],
                     initial: { min: 10, range: 20 }
                 },
                 {
-                    name: "Carnivores",
-                    color: "carnivores",
-                    growthRate: 0.2,
-                    moveProb: 0.3,
-                    interactions: [-0.001, 0.002, -0.02],
+                    name: "Rocks",
+                    color: "rocks",
+                    growthRate: 0,
+                    moveProb: 0,
+                    interactions: [0, 0, 0],
                     initial: { min: 5, range: 10 }
                 }
             ],
             playerColors: ['player-1', 'player-2', 'player-3', 'player-4'],
             logThreshold: 5,
             maxActionsPerTurn: 400,
-            houseRequirements: { plants: 500, carnivores: 40 },
+            houseRequirements: { hares: 500, rocks: 40 },
             victoryCondition: 3
         };
 
@@ -586,9 +586,9 @@
             selectedSpecies: document.getElementById('selected-species'),
             growthRate: document.getElementById('growth-rate'),
             moveProb: document.getElementById('move-prob'),
-            plantsTotal: document.getElementById('plants-total'),
-            herbivoresTotal: document.getElementById('herbivores-total'),
-            carnivoresTotal: document.getElementById('carnivores-total'),
+            haresTotal: document.getElementById('hares-total'),
+            foxesTotal: document.getElementById('foxes-total'),
+            rocksTotal: document.getElementById('rocks-total'),
             scoreboard: document.getElementById('scoreboard'),
             historyLog: document.getElementById('history-log'),
             up: document.getElementById('up'),
@@ -639,7 +639,7 @@
                 state.players.push({
                     name,
                     color: config.playerColors[i],
-                    scores: [0, 0, 0], // Plants, Herbivores, Carnivores
+                    scores: [0, 0, 0], // Hares, Foxes, Rocks
                     actionsUsed: 0,
                     houses: 0
                 });
@@ -791,17 +791,17 @@
         // Check if player can build a house
         function canBuildHouse() {
             const player = state.players[state.currentPlayer];
-            return player.scores[2] >= config.houseRequirements.carnivores && 
-                   player.scores[0] >= config.houseRequirements.plants;
+            return player.scores[2] >= config.houseRequirements.rocks && 
+                   player.scores[0] >= config.houseRequirements.hares;
         }
 
         // Build a house at current cursor position
         function buildHouse() {
             const player = state.players[state.currentPlayer];
             
-            if (player.scores[2] < config.houseRequirements.carnivores || 
-                player.scores[0] < config.houseRequirements.plants) {
-                addHistory("Not enough resources to build a house (need 40C and 500P)");
+            if (player.scores[2] < config.houseRequirements.rocks || 
+                player.scores[0] < config.houseRequirements.hares) {
+                addHistory("Not enough resources to build a house (need 40R and 500H)");
                 return;
             }
             
@@ -815,8 +815,8 @@
             }
             
             // Deduct resources
-            player.scores[2] -= config.houseRequirements.carnivores;
-            player.scores[0] -= config.houseRequirements.plants;
+            player.scores[2] -= config.houseRequirements.rocks;
+            player.scores[0] -= config.houseRequirements.hares;
             
             // Clear all species from this cell
             state.ecosystem[state.cursor.y][state.cursor.x] = [0, 0, 0];
@@ -1006,9 +1006,9 @@
             calculateChanges();
             
             // Update totals display
-            elements.plantsTotal.textContent = state.totals[0];
-            elements.herbivoresTotal.textContent = state.totals[1];
-            elements.carnivoresTotal.textContent = state.totals[2];
+            elements.haresTotal.textContent = state.totals[0];
+            elements.foxesTotal.textContent = state.totals[1];
+            elements.rocksTotal.textContent = state.totals[2];
         }
 
         // Render the information panel
