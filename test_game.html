@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecosystem Tracker</title>
+    <style>
+        :root {
+            --plants: #4CAF50;
+            --herbivores: #FFC107;
+            --carnivores: #F44336;
+            --positive: #2E7D32;
+            --negative: #C62828;
+            --primary: #2196F3;
+            --secondary: #607D8B;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 25px;
+        }
+        .main-panel, .tracker-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+        .cell {
+            border: 2px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .cell.selected {
+            border-color: var(--primary);
+            background: #e8f4fd;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(33,150,243,0.15);
+        }
+        .entity {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0d8aee;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.secondary {
+            background: var(--secondary);
+        }
+        .tracker-section {
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .tracker-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .species-badge {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        .badge {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .plants-badge { background: var(--plants); }
+        .herbivores-badge { background: var(--herbivores); }
+        .carnivores-badge { background: var(--carnivores); }
+        .positive { color: var(--positive); font-weight: 600; }
+        .negative { color: var(--negative); font-weight: 600; }
+        .history-log {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+        }
+        .log-entry {
+            padding: 8px 10px;
+            margin: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .info-display {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .info-value {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ecosystem Simulation Tracker</h1>
+    
+    <div class="game-container">
+        <div class="main-panel">
+            <div class="info-display">
+                <div class="info-item">
+                    <span class="info-label">Current Turn</span>
+                    <span class="info-value" id="turn-count">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Selected Species</span>
+                    <span class="info-value" id="selected-species">Plants</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Growth Rate</span>
+                    <span class="info-value" id="growth-rate">0.1</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Move Probability</span>
+                    <span class="info-value" id="move-prob">5%</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="up">↑ Up</button>
+                <button id="left">← Left</button>
+                <button id="right">→ Right</button>
+                <button id="down">↓ Down</button>
+                <button id="increase">+ Increase</button>
+                <button id="decrease">- Decrease</button>
+                <button id="switch">Switch Species</button>
+                <button id="next">Next Turn</button>
+            </div>
+            
+            <div class="grid" id="grid"></div>
+        </div>
+        
+        <div class="tracker-panel">
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>Population Totals</h3>
+                    <span class="tooltip">ⓘ
+                        <span class="tooltiptext">Current total population counts for each species across the entire ecosystem</span>
+                    </span>
+                </div>
+                <div id="species-totals">
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge plants-badge"></span>Plants
+                        </span>
+                        <span id="plants-total">0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge herbivores-badge"></span>Herbivores
+                        </span>
+                        <span id="herbivores-total">0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge carnivores-badge"></span>Carnivores
+                        </span>
+                        <span id="carnivores-total">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>This Turn</h3>
+                    <button id="reset-turn" class="secondary">Reset</button>
+                </div>
+                <div id="turn-changes">
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge plants-badge"></span>Plants
+                        </span>
+                        <span id="plants-change">+0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge herbivores-badge"></span>Herbivores
+                        </span>
+                        <span id="herbivores-change">+0</span>
+                    </div>
+                    <div class="tracker-item">
+                        <span class="species-badge">
+                            <span class="badge carnivores-badge"></span>Carnivores
+                        </span>
+                        <span id="carnivores-change">+0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tracker-section">
+                <div class="tracker-header">
+                    <h3>Event History</h3>
+                    <button id="clear-log" class="secondary">Clear</button>
+                </div>
+                <div class="history-log" id="history-log">
+                    <div class="log-entry">Game initialized. Ready to play!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game configuration
+        const config = {
+            gridSize: { width: 5, height: 5 },
+            species: [
+                {
+                    name: "Plants",
+                    color: "plants",
+                    growthRate: 0.1,
+                    moveProb: 0.05,
+                    interactions: [-0.01, 0.001, -0.002],
+                    initial: { min: 40, range: 40 }
+                },
+                {
+                    name: "Herbivores",
+                    color: "herbivores",
+                    growthRate: -0.05,
+                    moveProb: 0.2,
+                    interactions: [0.005, -0.01, 0.003],
+                    initial: { min: 10, range: 20 }
+                },
+                {
+                    name: "Carnivores",
+                    color: "carnivores",
+                    growthRate: 0.2,
+                    moveProb: 0.3,
+                    interactions: [-0.001, 0.002, -0.02],
+                    initial: { min: 5, range: 10 }
+                }
+            ],
+            logThreshold: 5  // Minimum change to log
+        };
+
+        // Game state
+        const state = {
+            ecosystem: [],
+            cursor: { x: 0, y: 0 },
+            selectedSpecies: 0,
+            turn: 0,
+            totals: [0, 0, 0],
+            prevTotals: [0, 0, 0],
+            changes: [0, 0, 0],
+            history: []
+        };
+
+        // DOM elements
+        const elements = {
+            grid: document.getElementById('grid'),
+            turnCount: document.getElementById('turn-count'),
+            selectedSpecies: document.getElementById('selected-species'),
+            growthRate: document.getElementById('growth-rate'),
+            moveProb: document.getElementById('move-prob'),
+            plantsTotal: document.getElementById('plants-total'),
+            herbivoresTotal: document.getElementById('herbivores-total'),
+            carnivoresTotal: document.getElementById('carnivores-total'),
+            plantsChange: document.getElementById('plants-change'),
+            herbivoresChange: document.getElementById('herbivores-change'),
+            carnivoresChange: document.getElementById('carnivores-change'),
+            historyLog: document.getElementById('history-log'),
+            up: document.getElementById('up'),
+            down: document.getElementById('down'),
+            left: document.getElementById('left'),
+            right: document.getElementById('right'),
+            increase: document.getElementById('increase'),
+            decrease: document.getElementById('decrease'),
+            switch: document.getElementById('switch'),
+            next: document.getElementById('next'),
+            resetTurn: document.getElementById('reset-turn'),
+            clearLog: document.getElementById('clear-log')
+        };
+
+        // Initialize ecosystem with random populations
+        function initEcosystem() {
+            state.ecosystem = [];
+            for (let y = 0; y < config.gridSize.height; y++) {
+                state.ecosystem[y] = [];
+                for (let x = 0; x < config.gridSize.width; x++) {
+                    state.ecosystem[y][x] = config.species.map(species => 
+                        species.initial.min + Math.floor(Math.random() * species.initial.range)
+                    );
+                }
+            }
+            updateTotals();
+            state.prevTotals = [...state.totals];
+            resetChanges();
+            addHistory("Ecosystem initialized with random populations");
+        }
+
+        // Calculate total populations
+        function updateTotals() {
+            state.totals = [0, 0, 0];
+            state.ecosystem.forEach(row => {
+                row.forEach(cell => {
+                    cell.forEach((count, i) => {
+                        state.totals[i] += count;
+                    });
+                });
+            });
+        }
+
+        // Calculate population changes since last turn
+        function calculateChanges() {
+            state.changes = state.totals.map((total, i) => total - state.prevTotals[i]);
+        }
+
+        // Reset changes for new turn
+        function resetChanges() {
+            state.changes = [0, 0, 0];
+        }
+
+        // Add entry to history log
+        function addHistory(message) {
+            const entry = {
+                turn: state.turn,
+                message,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            state.history.unshift(entry);
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `Turn ${entry.turn} @ ${entry.timestamp}: ${entry.message}`;
+            elements.historyLog.prepend(logEntry);
+        }
+
+        // Apply species interactions
+        function applyInteractions() {
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const newPopulations = [0, 0, 0];
+                    
+                    // Calculate new populations based on interactions
+                    config.species.forEach((species, i) => {
+                        let interactionEffect = 0;
+                        config.species.forEach((otherSpecies, j) => {
+                            interactionEffect += species.interactions[j] * cell[j];
+                        });
+                        
+                        newPopulations[i] = cell[i] + cell[i] * (species.growthRate + interactionEffect);
+                        newPopulations[i] = Math.max(0, Math.floor(newPopulations[i]));
+                    });
+                    
+                    // Update cell populations
+                    newPopulations.forEach((count, i) => {
+                        state.ecosystem[y][x][i] = count;
+                    });
+                });
+            });
+        }
+
+        // Simulate species movement
+        function simulateMovement() {
+            const movementChanges = Array(config.gridSize.height).fill().map(() => 
+                Array(config.gridSize.width).fill().map(() => [0, 0, 0]));
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, speciesIdx) => {
+                        const moveProb = config.species[speciesIdx].moveProb;
+                        if (Math.random() < moveProb) {
+                            const movingCount = Math.floor(count / 2);
+                            const perNeighbor = Math.floor(movingCount / 8);
+                            
+                            // Distribute to adjacent cells
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    
+                                    const nx = x + dx;
+                                    const ny = y + dy;
+                                    
+                                    if (nx >= 0 && nx < config.gridSize.width && 
+                                        ny >= 0 && ny < config.gridSize.height) {
+                                        movementChanges[ny][nx][speciesIdx] += perNeighbor;
+                                        state.ecosystem[y][x][speciesIdx] -= perNeighbor;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // Apply movement changes
+            movementChanges.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, speciesIdx) => {
+                        state.ecosystem[y][x][speciesIdx] += count;
+                    });
+                });
+            });
+        }
+
+        // Render the ecosystem grid
+        function renderGrid() {
+            elements.grid.innerHTML = '';
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'cell';
+                    if (x === state.cursor.x && y === state.cursor.y) {
+                        cellElement.classList.add('selected');
+                    }
+                    
+                    cell.forEach((count, speciesIdx) => {
+                        const entityElement = document.createElement('div');
+                        entityElement.className = 'entity';
+                        entityElement.innerHTML = `
+                            <span class="species-badge">
+                                <span class="badge ${config.species[speciesIdx].color}-badge"></span>
+                                ${config.species[speciesIdx].name}
+                            </span>
+                            <span>${count}</span>
+                        `;
+                        cellElement.appendChild(entityElement);
+                    });
+                    
+                    elements.grid.appendChild(cellElement);
+                });
+            });
+        }
+
+        // Render the tracker panel
+        function renderTracker() {
+            updateTotals();
+            calculateChanges();
+            
+            // Update totals display
+            elements.plantsTotal.textContent = state.totals[0];
+            elements.herbivoresTotal.textContent = state.totals[1];
+            elements.carnivoresTotal.textContent = state.totals[2];
+            
+            // Update changes display
+            const updateChangeDisplay = (element, value) => {
+                element.textContent = (value >= 0 ? '+' : '') + value;
+                element.className = value >= 0 ? 'positive' : 'negative';
+            };
+            
+            updateChangeDisplay(elements.plantsChange, state.changes[0]);
+            updateChangeDisplay(elements.herbivoresChange, state.changes[1]);
+            updateChangeDisplay(elements.carnivoresChange, state.changes[2]);
+        }
+
+        // Render the information panel
+        function renderInfo() {
+            elements.turnCount.textContent = state.turn;
+            elements.selectedSpecies.textContent = config.species[state.selectedSpecies].name;
+            elements.growthRate.textContent = config.species[state.selectedSpecies].growthRate;
+            elements.moveProb.textContent = `${Math.round(config.species[state.selectedSpecies].moveProb * 100)}%`;
+        }
+
+        // Advance to next turn
+        function nextTurn() {
+            // Log significant changes before updating
+            config.species.forEach((species, i) => {
+                const change = state.changes[i];
+                if (Math.abs(change) >= config.logThreshold) {
+                    const direction = change > 0 ? 'increased' : 'decreased';
+                    addHistory(`${species.name} ${direction} by ${Math.abs(change)}`);
+                }
+            });
+            
+            applyInteractions();
+            simulateMovement();
+            
+            state.prevTotals = [...state.totals];
+            state.turn++;
+            resetChanges();
+            
+            renderAll();
+        }
+
+        // Reset current turn changes
+        function resetTurn() {
+            resetChanges();
+            renderTracker();
+            addHistory("Turn changes reset");
+        }
+
+        // Clear history log
+        function clearLog() {
+            state.history = [];
+            elements.historyLog.innerHTML = '';
+            addHistory("History log cleared");
+        }
+
+        // Render all game components
+        function renderAll() {
+            renderGrid();
+            renderTracker();
+            renderInfo();
+        }
+
+        // Initialize game controls
+        function initControls() {
+            // Movement controls
+            elements.up.addEventListener('click', () => {
+                if (state.cursor.y > 0) state.cursor.y--;
+                renderGrid();
+            });
+            
+            elements.down.addEventListener('click', () => {
+                if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++;
+                renderGrid();
+            });
+            
+            elements.left.addEventListener('click', () => {
+                if (state.cursor.x > 0) state.cursor.x--;
+                renderGrid();
+            });
+            
+            elements.right.addEventListener('click', () => {
+                if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++;
+                renderGrid();
+            });
+            
+            // Population adjustment
+            elements.increase.addEventListener('click', () => {
+                state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                renderAll();
+            });
+            
+            elements.decrease.addEventListener('click', () => {
+                if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
+                    state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
+                    renderAll();
+                }
+            });
+            
+            // Species selection
+            elements.switch.addEventListener('click', () => {
+                state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length;
+                renderInfo();
+            });
+            
+            // Game flow
+            elements.next.addEventListener('click', nextTurn);
+            elements.resetTurn.addEventListener('click', resetTurn);
+            elements.clearLog.addEventListener('click', clearLog);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch (e.key) {
+                    case 'ArrowUp': if (state.cursor.y > 0) state.cursor.y--; break;
+                    case 'ArrowDown': if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++; break;
+                    case 'ArrowLeft': if (state.cursor.x > 0) state.cursor.x--; break;
+                    case 'ArrowRight': if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++; break;
+                    case '+': 
+                        state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                        break;
+                    case '-': 
+                        if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
+                            state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
+                        }
+                        break;
+                    case 'Tab': 
+                        e.preventDefault();
+                        state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length; 
+                        break;
+                    case 'Enter': nextTurn(); break;
+                    default: return;
+                }
+                renderAll();
+            });
+        }
+
+        // Initialize the game
+        function initGame() {
+            initEcosystem();
+            initControls();
+            renderAll();
+        }
+
+        // Start the game when page loads
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>

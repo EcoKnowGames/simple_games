@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Ecosystem Game</title>
+    <style>
+        :root {
+            --hares: #4CAF50;
+            --foxes: #FFC107;
+            --rocks: #F44336;
+            --player1: #2196F3;
+            --player2: #9C27B0;
+            --player3: #009688;
+            --player4: #FF5722;
+            --positive: #2E7D32;
+            --negative: #C62828;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 25px;
+        }
+        .main-panel, .side-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+        .cell {
+            border: 2px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .cell.selected {
+            border-color: var(--primary);
+            background: #e8f4fd;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(33,150,243,0.15);
+        }
+        .entity {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #2196F3;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0d8aee;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button.secondary {
+            background: #607d8b;
+        }
+        .tracker-section {
+            margin-bottom: 25px;
+        }
+        .tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .tracker-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .species-badge {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        .badge {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .hares-badge { background: var(--hares); }
+        .foxes-badge { background: var(--foxes); }
+        .rocks-badge { background: var(--rocks); }
+        .positive { color: var(--positive); font-weight: 600; }
+        .negative { color: var(--negative); font-weight: 600; }
+        .history-log {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .log-entry {
+            padding: 6px;
+            margin: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .info-display {
+            background: #E3F2FD;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .info-value {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .player-indicator {
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .player-1 { background: var(--player1); }
+        .player-2 { background: var(--player2); }
+        .player-3 { background: var(--player3); }
+        .player-4 { background: var(--player4); }
+        .scoreboard {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .scoreboard th, .scoreboard td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .scoreboard th {
+            background: #f5f5f5;
+        }
+        .scoreboard tr:last-child td {
+            border-bottom: none;
+        }
+        .setup-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .setup-form {
+            display: grid;
+            gap: 15px;
+        }
+        .setup-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .setup-form input, .setup-form select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .start-button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="setup-screen">
+        <div class="setup-panel">
+            <h2>Game Setup</h2>
+            <div class="setup-form">
+                <div>
+                    <label for="player-count">Number of Players (2-4):</label>
+                    <select id="player-count">
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                </div>
+                <div id="player-names-container">
+                    <!-- Player name inputs will be added here -->
+                </div>
+                <button class="start-button" id="start-game">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" style="display: none;">
+        <h1>Multiplayer Ecosystem Game</h1>
+        
+        <div class="game-container">
+            <div class="main-panel">
+                <div id="player-turn-display" class="player-indicator player-1">
+                    Player 1's Turn
+                </div>
+                
+                <div class="info-display">
+                    <div class="info-item">
+                        <span class="info-label">Current Turn</span>
+                        <span class="info-value" id="turn-count">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Selected Species</span>
+                        <span class="info-value" id="selected-species">Hares</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Growth Rate</span>
+                        <span class="info-value" id="growth-rate">0.1</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Move Probability</span>
+                        <span class="info-value" id="move-prob">5%</span>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="up">↑ Up</button>
+                    <button id="left">← Left</button>
+                    <button id="right">→ Right</button>
+                    <button id="down">↓ Down</button>
+                    <button id="increase">+ Increase</button>
+                    <button id="decrease">- Decrease</button>
+                    <button id="switch">Switch Species</button>
+                    <button id="end-turn">End Turn</button>
+                </div>
+                
+                <div class="grid" id="grid"></div>
+            </div>
+            
+            <div class="side-panel">
+                <div class="tracker-section">
+                    <div class="tracker-header">
+                        <h3>Scoreboard</h3>
+                    </div>
+                    <table class="scoreboard" id="scoreboard">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Hares</th>
+                                <th>Foxes</th>
+                                <th>Rocks</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Scores will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="tracker-section">
+                    <div class="tracker-header">
+                        <h3>Population Totals</h3>
+                    </div>
+                    <div id="species-totals">
+                        <div class="tracker-item">
+                            <span class="species-badge">
+                                <span class="badge hares-badge"></span>Hares
+                            </span>
+                            <span id="hares-total">0</span>
+                        </div>
+                        <div class="tracker-item">
+                            <span class="species-badge">
+                                <span class="badge foxes-badge"></span>Foxes
+                            </span>
+                            <span id="foxes-total">0</span>
+                        </div>
+                        <div class="tracker-item">
+                            <span class="species-badge">
+                                <span class="badge rocks-badge"></span>Rocks
+                            </span>
+                            <span id="rocks-total">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tracker-section">
+                    <div class="tracker-header">
+                        <h3>Event History</h3>
+                    </div>
+                    <div class="history-log" id="history-log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game configuration
+        const config = {
+            gridSize: { width: 5, height: 5 },
+            species: [
+                {
+                    name: "Hares",
+                    color: "hares",
+                    growthRate: 1.4,
+                    moveProb: 0.3,
+                    interactions: [-0.002, -0.002, 0],
+                    initial: { min: 40, range: 40 }
+                },
+                {
+                    name: "Foxes",
+                    color: "foxes",
+                    growthRate: -0.2,
+                    moveProb: 0.2,
+                    interactions: [0.001, -0.004, 0],
+                    initial: { min: 10, range: 20 }
+                },
+                {
+                    name: "Rocks",
+                    color: "rocks",
+                    growthRate: 0.0,
+                    moveProb: 0.0,
+                    interactions: [0, 0, 0],
+                    initial: { min: 5, range: 10 }
+                }
+            ],
+            playerColors: ['player-1', 'player-2', 'player-3', 'player-4'],
+            logThreshold: 5
+        };
+
+        // Game state
+        const state = {
+            ecosystem: [],
+            players: [],
+            currentPlayer: 0,
+            cursor: { x: 0, y: 0 },
+            selectedSpecies: 0,
+            turn: 0,
+            totals: [0, 0, 0],
+            prevTotals: [0, 0, 0],
+            changes: [0, 0, 0],
+            history: []
+        };
+
+        // DOM elements
+        const elements = {
+            setupScreen: document.getElementById('setup-screen'),
+            gameScreen: document.getElementById('game-screen'),
+            playerCount: document.getElementById('player-count'),
+            playerNamesContainer: document.getElementById('player-names-container'),
+            startGame: document.getElementById('start-game'),
+            playerTurnDisplay: document.getElementById('player-turn-display'),
+            grid: document.getElementById('grid'),
+            turnCount: document.getElementById('turn-count'),
+            selectedSpecies: document.getElementById('selected-species'),
+            growthRate: document.getElementById('growth-rate'),
+            moveProb: document.getElementById('move-prob'),
+            haresTotal: document.getElementById('hares-total'),
+            foxesTotal: document.getElementById('foxes-total'),
+            rocksTotal: document.getElementById('rocks-total'),
+            scoreboard: document.getElementById('scoreboard'),
+            historyLog: document.getElementById('history-log'),
+            up: document.getElementById('up'),
+            down: document.getElementById('down'),
+            left: document.getElementById('left'),
+            right: document.getElementById('right'),
+            increase: document.getElementById('increase'),
+            decrease: document.getElementById('decrease'),
+            switch: document.getElementById('switch'),
+            endTurn: document.getElementById('end-turn')
+        };
+
+        // Initialize player name inputs based on selected count
+        elements.playerCount.addEventListener('change', function() {
+            const count = parseInt(this.value);
+            elements.playerNamesContainer.innerHTML = '';
+            
+            for (let i = 0; i < count; i++) {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label for="player-${i+1}">Player ${i+1} Name:</label>
+                    <input type="text" id="player-${i+1}" required>
+                `;
+                elements.playerNamesContainer.appendChild(div);
+            }
+        });
+
+        // Start the game
+        elements.startGame.addEventListener('click', function() {
+            const playerCount = parseInt(elements.playerCount.value);
+            state.players = [];
+            
+            for (let i = 0; i < playerCount; i++) {
+                const name = document.getElementById(`player-${i+1}`).value || `Player ${i+1}`;
+                state.players.push({
+                    name,
+                    color: config.playerColors[i],
+                    scores: [0, 0, 0] // Hares, Foxes, Rocks
+                });
+            }
+            
+            elements.setupScreen.style.display = 'none';
+            elements.gameScreen.style.display = 'block';
+            
+            initEcosystem();
+            initControls();
+            renderAll();
+        });
+
+        // Initialize ecosystem with random populations
+        function initEcosystem() {
+            state.ecosystem = [];
+            for (let y = 0; y < config.gridSize.height; y++) {
+                state.ecosystem[y] = [];
+                for (let x = 0; x < config.gridSize.width; x++) {
+                    state.ecosystem[y][x] = config.species.map(species => 
+                        species.initial.min + Math.floor(Math.random() * species.initial.range)
+                    );
+                }
+            }
+            updateTotals();
+            state.prevTotals = [...state.totals];
+            resetChanges();
+            addHistory("Game started!");
+        }
+
+        // Calculate total populations
+        function updateTotals() {
+            state.totals = [0, 0, 0];
+            state.ecosystem.forEach(row => {
+                row.forEach(cell => {
+                    cell.forEach((count, i) => {
+                        state.totals[i] += count;
+                    });
+                });
+            });
+        }
+
+        // Calculate population changes since last turn
+        function calculateChanges() {
+            state.changes = state.totals.map((total, i) => total - state.prevTotals[i]);
+        }
+
+        // Reset changes for new turn
+        function resetChanges() {
+            state.changes = [0, 0, 0];
+        }
+
+        // Add entry to history log
+        function addHistory(message) {
+            const entry = {
+                turn: state.turn,
+                player: state.currentPlayer,
+                message,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            state.history.unshift(entry);
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `${state.players[state.currentPlayer].name}: ${entry.message}`;
+            elements.historyLog.prepend(logEntry);
+        }
+
+        // Apply species interactions
+        function applyInteractions() {
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const newPopulations = [0, 0, 0];
+                    
+                    // Calculate new populations based on interactions
+                    config.species.forEach((species, i) => {
+                        let interactionEffect = 0;
+                        config.species.forEach((otherSpecies, j) => {
+                            interactionEffect += species.interactions[j] * cell[j];
+                        });
+                        
+                        newPopulations[i] = cell[i] + cell[i] * (species.growthRate + interactionEffect);
+                        newPopulations[i] = Math.max(0, Math.floor(newPopulations[i]));
+                    });
+                    
+                    // Update cell populations
+                    newPopulations.forEach((count, i) => {
+                        state.ecosystem[y][x][i] = count;
+                    });
+                });
+            });
+        }
+
+        // Simulate species movement
+        function simulateMovement() {
+            const movementChanges = Array(config.gridSize.height).fill().map(() => 
+                Array(config.gridSize.width).fill().map(() => [0, 0, 0]));
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, speciesIdx) => {
+                        const moveProb = config.species[speciesIdx].moveProb;
+                        if (Math.random() < moveProb) {
+                            const movingCount = Math.floor(count / 2);
+                            const perNeighbor = Math.floor(movingCount / 8);
+                            
+                            // Distribute to adjacent cells
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    
+                                    const nx = x + dx;
+                                    const ny = y + dy;
+                                    
+                                    if (nx >= 0 && nx < config.gridSize.width && 
+                                        ny >= 0 && ny < config.gridSize.height) {
+                                        movementChanges[ny][nx][speciesIdx] += perNeighbor;
+                                        state.ecosystem[y][x][speciesIdx] -= perNeighbor;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // Apply movement changes
+            movementChanges.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    cell.forEach((count, speciesIdx) => {
+                        state.ecosystem[y][x][speciesIdx] += count;
+                    });
+                });
+            });
+        }
+
+        // Render the ecosystem grid
+        function renderGrid() {
+            elements.grid.innerHTML = '';
+            
+            state.ecosystem.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'cell';
+                    if (x === state.cursor.x && y === state.cursor.y) {
+                        cellElement.classList.add('selected');
+                    }
+                    
+                    cell.forEach((count, speciesIdx) => {
+                        const entityElement = document.createElement('div');
+                        entityElement.className = 'entity';
+                        entityElement.innerHTML = `
+                            <span class="species-badge">
+                                <span class="badge ${config.species[speciesIdx].color}-badge"></span>
+                                ${config.species[speciesIdx].name}
+                            </span>
+                            <span>${count}</span>
+                        `;
+                        cellElement.appendChild(entityElement);
+                    });
+                    
+                    elements.grid.appendChild(cellElement);
+                });
+            });
+        }
+
+        // Render the scoreboard
+        function renderScoreboard() {
+            const tbody = elements.scoreboard.querySelector('tbody');
+            tbody.innerHTML = '';
+            
+            state.players.forEach((player, index) => {
+                const row = document.createElement('tr');
+                if (index === state.currentPlayer) {
+                    row.style.fontWeight = 'bold';
+                }
+                
+                const total = player.scores.reduce((sum, score) => sum + score, 0);
+                
+                row.innerHTML = `
+                    <td>${player.name}</td>
+                    <td>${player.scores[0]}</td>
+                    <td>${player.scores[1]}</td>
+                    <td>${player.scores[2]}</td>
+                    <td>${total}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Render the tracker panel
+        function renderTracker() {
+            updateTotals();
+            calculateChanges();
+            
+            // Update totals display
+            elements.haresTotal.textContent = state.totals[0];
+            elements.foxesTotal.textContent = state.totals[1];
+            elements.rocksTotal.textContent = state.totals[2];
+        }
+
+        // Render the information panel
+        function renderInfo() {
+            elements.turnCount.textContent = state.turn;
+            elements.selectedSpecies.textContent = config.species[state.selectedSpecies].name;
+            elements.growthRate.textContent = config.species[state.selectedSpecies].growthRate;
+            elements.moveProb.textContent = `${Math.round(config.species[state.selectedSpecies].moveProb * 100)}%`;
+            
+            // Update player turn display
+            const currentPlayer = state.players[state.currentPlayer];
+            elements.playerTurnDisplay.textContent = `${currentPlayer.name}'s Turn`;
+            elements.playerTurnDisplay.className = `player-indicator ${currentPlayer.color}`;
+        }
+
+        // Advance to next player's turn
+        function nextTurn() {
+            // Apply ecosystem interactions and movement
+            applyInteractions();
+            simulateMovement();
+            
+            state.prevTotals = [...state.totals];
+            state.turn++;
+            
+            // Move to next player
+            state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
+            if (state.currentPlayer === 0) {
+                // Full round completed
+                addHistory("Round completed!");
+            }
+            
+            resetChanges();
+            renderAll();
+        }
+
+        // Render all game components
+        function renderAll() {
+            renderGrid();
+            renderTracker();
+            renderInfo();
+            renderScoreboard();
+        }
+
+        // Initialize game controls
+        function initControls() {
+            // Movement controls
+            elements.up.addEventListener('click', () => {
+                if (state.cursor.y > 0) state.cursor.y--;
+                renderGrid();
+            });
+            
+            elements.down.addEventListener('click', () => {
+                if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++;
+                renderGrid();
+            });
+            
+            elements.left.addEventListener('click', () => {
+                if (state.cursor.x > 0) state.cursor.x--;
+                renderGrid();
+            });
+            
+            elements.right.addEventListener('click', () => {
+                if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++;
+                renderGrid();
+            });
+            
+            // Population adjustment
+            elements.increase.addEventListener('click', () => {
+                state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                renderAll();
+            });
+            
+            elements.decrease.addEventListener('click', () => {
+                if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
+                    state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
+                    state.players[state.currentPlayer].scores[state.selectedSpecies]--;
+                    addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                    renderAll();
+                }
+            });
+            
+            // Species selection
+            elements.switch.addEventListener('click', () => {
+                state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length;
+                renderInfo();
+            });
+            
+            // End turn
+            elements.endTurn.addEventListener('click', nextTurn);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                switch (e.key) {
+                    case 'ArrowUp': if (state.cursor.y > 0) state.cursor.y--; break;
+                    case 'ArrowDown': if (state.cursor.y < config.gridSize.height - 1) state.cursor.y++; break;
+                    case 'ArrowLeft': if (state.cursor.x > 0) state.cursor.x--; break;
+                    case 'ArrowRight': if (state.cursor.x < config.gridSize.width - 1) state.cursor.x++; break;
+                    case '+': 
+                        state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]++;
+                        state.players[state.currentPlayer].scores[state.selectedSpecies]++;
+                        addHistory(`Increased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                        break;
+                    case '-': 
+                        if (state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies] > 0) {
+                            state.ecosystem[state.cursor.y][state.cursor.x][state.selectedSpecies]--;
+                            state.players[state.currentPlayer].scores[state.selectedSpecies]--;
+                            addHistory(`Decreased ${config.species[state.selectedSpecies].name} at (${state.cursor.x+1},${state.cursor.y+1})`);
+                        }
+                        break;
+                    case 'Tab': 
+                        e.preventDefault();
+                        state.selectedSpecies = (state.selectedSpecies + 1) % config.species.length; 
+                        break;
+                    case 'Enter': nextTurn(); break;
+                    default: return;
+                }
+                renderAll();
+            });
+        }
+
+        // Initialize player name inputs for default (2 players)
+        elements.playerCount.dispatchEvent(new Event('change'));
+    </script>
+</body>
+</html>
